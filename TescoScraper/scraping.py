@@ -11,18 +11,17 @@ class TescoGenreSpider(scrapy.Spider):
     name = "tesco_scraper"
     start_urls = ['https://www.tesco.com/groceries/en-GB/shop/fresh-food/all']
 
-    def check_page_number(self, link, prev_page):
-        is_next_page = False
-        idx = link.find('page=')
-        sub_string = link[idx:][len('page='):]
-        if prev_page == int(sub_string):
-            return True
+    def next_page_link(self, response):
+        first_tag = '//nav[@class="pagination--page-selector-wrapper"]'
+        second_tag = '/ul/li[last()]'
+        third_tag = '/a/@href'
 
-        prev_page += 1
+        xml_path = first_tag + second_tag + third_tag
 
-        return is_next_page, prev_page
+        link = response.xpath(xml_path).extract_first()
 
-    page = 1
+        return link
+
     def parse(self, response):
         PRODUCT_SELECTOR = response.css(html_identifier)
 
@@ -56,10 +55,9 @@ class TescoGenreSpider(scrapy.Spider):
                 'price': result_set.text
             }
 
-        xml_path_next_page = '.pagination-btn-holder ::attr(href)'
-        next_page_link = response.css(xml_path_next_page).extract_first()
-
-        is_next_page = check_page_number(next_page_link, self.page)[0]
-        new_page = check_page_number(next_page_link, self.page)[1]
-
-        
+        next_link = self.next_page_link(response)
+        if next_link:
+            yield scrapy.Request(
+                response.urljoin(next_link),
+                callback=self.parse
+            )
