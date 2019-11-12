@@ -11,6 +11,18 @@ class TescoGenreSpider(scrapy.Spider):
     name = "tesco_scraper"
     start_urls = ['https://www.tesco.com/groceries/en-GB/shop/fresh-food/all']
 
+    def check_page_number(self, link, prev_page):
+        is_next_page = False
+        idx = link.find('page=')
+        sub_string = link[idx:][len('page='):]
+        if prev_page == int(sub_string):
+            return True
+
+        prev_page += 1
+
+        return is_next_page, prev_page
+
+    page = 1
     def parse(self, response):
         PRODUCT_SELECTOR = response.css(html_identifier)
 
@@ -21,7 +33,6 @@ class TescoGenreSpider(scrapy.Spider):
         titles = response.xpath(xml_path_titles).extract()
         titles = titles[1:len(titles)]
 
-        prices = []
         for product in page_products:
             soup = BeautifulSoup(product, 'html.parser')
             spans = soup.find_all('span')
@@ -39,11 +50,16 @@ class TescoGenreSpider(scrapy.Spider):
             span = str(span)
             span_soup = BeautifulSoup(span, 'html.parser')
 
-            result_set = span_soup.find_all('span', {'class': 'value'})
-            for result in result_set:
-                prices.append(result.text)
+            result_set = span_soup.find_all('span', {'class': 'value'})[0]
 
-        for i in range(len(prices)):
             yield {
-                titles[i]: prices[i]
+                'price': result_set.text
             }
+
+        xml_path_next_page = '.pagination-btn-holder ::attr(href)'
+        next_page_link = response.css(xml_path_next_page).extract_first()
+
+        is_next_page = check_page_number(next_page_link, self.page)[0]
+        new_page = check_page_number(next_page_link, self.page)[1]
+
+        
