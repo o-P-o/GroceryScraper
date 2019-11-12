@@ -49,7 +49,14 @@ class TescoGenreSpider(scrapy.Spider):
             span = str(span)
             span_soup = BeautifulSoup(span, 'html.parser')
 
-            result_set = span_soup.find_all('span', {'class': 'value'})[0]
+            print(span_soup)
+
+            result_set = span_soup.find_all('span', {'class': 'value'})
+
+            try:
+                result_set = result_set[0]
+            except IndexError:
+                continue
 
             yield {
                 'price': result_set.text
