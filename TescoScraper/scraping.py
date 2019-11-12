@@ -4,6 +4,8 @@ from bs4 import BeautifulSoup
 
 PRODUCT_WRAPPER_TAG = 'li'
 PRODUCT_WRAPPER_NAME = 'product-list--list-item'
+PRODUCT_TILE_CLASS = 'product-tile--title'
+NEXT_PAGE_CLASS = 'pagination--page-selector-wrapper'
 html_identifier = PRODUCT_WRAPPER_TAG + '.' + PRODUCT_WRAPPER_NAME
 
 
@@ -12,7 +14,7 @@ class TescoGenreSpider(scrapy.Spider):
     start_urls = ['https://www.tesco.com/groceries/en-GB/shop/fresh-food/all']
 
     def next_page_link(self, response):
-        first_tag = '//nav[@class="pagination--page-selector-wrapper"]'
+        first_tag = '//nav[@class="' + NEXT_PAGE_CLASS + '"]'
         second_tag = '/ul/li[last()]'
         third_tag = '/a/@href'
 
@@ -28,11 +30,14 @@ class TescoGenreSpider(scrapy.Spider):
         xml_path_prices = '//li[@class="' + PRODUCT_WRAPPER_NAME + '"]'
         page_products = response.xpath(xml_path_prices).extract()
 
-        xml_path_titles = '//a[@data-auto="product-tile--title"]/text()'
+        xml_path_titles = '//a[@data-auto="' + PRODUCT_TILE_CLASS + '"]/text()'
         titles = response.xpath(xml_path_titles).extract()
         titles = titles[1:len(titles)]
 
-        for product in page_products:
+        for i in range(len(page_products)):
+            product = page_products[i]
+            product_title = titles[i]
+
             soup = BeautifulSoup(product, 'html.parser')
             spans = soup.find_all('span')
 
@@ -59,7 +64,7 @@ class TescoGenreSpider(scrapy.Spider):
                 continue
 
             yield {
-                'price': result_set.text
+                product_title: result_set.text
             }
 
         next_link = self.next_page_link(response)
