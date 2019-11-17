@@ -32,10 +32,10 @@ class TescoGenreSpider(scrapy.Spider):
     for category in CATEGORIES:
         url = PAGE_LINK_1 + category + PAGE_LINK_2
         start_urls.append(url)
-    all_fresh_food = { }
+    all_prices = { }
 
-    def pickle_results(self):
-        pickle.dump(self.all_fresh_food, open(self.category + ".pkl", "wb"))
+    def pickle_results(self, name):
+        pickle.dump(self.all_prices, open(name + ".pkl", "wb"))
 
         return None
 
@@ -95,7 +95,13 @@ class TescoGenreSpider(scrapy.Spider):
                 callback=self.parse
             )
 
-        self.pickle_results()
+        current_url = response.request.url
+        pickle_name = None
+        for category in categories:
+            if category in current_url:
+                pickle_name = category
+                break
+        self.pickle_results(pickle_name)
 
 
 
