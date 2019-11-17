@@ -1,5 +1,9 @@
 import scrapy
+import pickle
+
 from bs4 import BeautifulSoup
+from scrapy.crawler import CrawlerProcess
+from scrapy.utils.project import get_project_settings
 
 
 PRODUCT_WRAPPER_TAG = 'li'
@@ -8,10 +12,32 @@ PRODUCT_TILE_CLASS = 'product-tile--title'
 NEXT_PAGE_CLASS = 'pagination--page-selector-wrapper'
 html_identifier = PRODUCT_WRAPPER_TAG + '.' + PRODUCT_WRAPPER_NAME
 
+PAGE_LINK_1 = 'https://www.tesco.com/groceries/en-GB/shop/'
+PAGE_LINK_2 = '/all'
+CATEGORIES = ['fresh-food',
+    'bakery',
+    'frozen-food',
+    'food-cupboard',
+    'drinks',
+    'baby',
+    'health-and-beauty',
+    'pets',
+    'household',
+    'home-and-ents']
+
 
 class TescoGenreSpider(scrapy.Spider):
     name = "tesco_scraper"
-    start_urls = ['https://www.tesco.com/groceries/en-GB/shop/fresh-food/all']
+    start_urls = []
+    for category in CATEGORIES:
+        url = PAGE_LINK_1 + category + PAGE_LINK_2
+        start_urls.append(url)
+    all_fresh_food = { }
+
+    def pickle_results(self):
+        pickle.dump(self.all_fresh_food, open(self.category + ".pkl", "wb"))
+
+        return None
 
     def next_page_link(self, response):
         first_tag = '//nav[@class="' + NEXT_PAGE_CLASS + '"]'
@@ -42,7 +68,6 @@ class TescoGenreSpider(scrapy.Spider):
             spans = soup.find_all('span')
 
             price_span = None
-
             for span in spans:
                 if span.get('class') == None:
                     continue
@@ -54,8 +79,6 @@ class TescoGenreSpider(scrapy.Spider):
             span = str(span)
             span_soup = BeautifulSoup(span, 'html.parser')
 
-            print(span_soup)
-
             result_set = span_soup.find_all('span', {'class': 'value'})
 
             try:
@@ -63,9 +86,7 @@ class TescoGenreSpider(scrapy.Spider):
             except IndexError:
                 continue
 
-            yield {
-                product_title: result_set.text
-            }
+            self.all_fresh_food[product_title] = result_set.text
 
         next_link = self.next_page_link(response)
         if next_link:
@@ -73,3 +94,10 @@ class TescoGenreSpider(scrapy.Spider):
                 response.urljoin(next_link),
                 callback=self.parse
             )
+
+        self.pickle_results()
+
+
+
+if __name__ == "__main__":
+    pass
